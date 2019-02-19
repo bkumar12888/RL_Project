@@ -102,8 +102,10 @@ class CabDriver():
         
         #Action can be represeted by from location & To location
         # A -> B = [1,0,0,0,0] to [0,1,0,0,0]
-        state_encod[(m + t + d) + action[0] - 1] = 1
-        state_encod[(m + t + d + m) + action[1] - 1] = 1
+        # for no-ride = [0,0,0,0,0] to [0,0,0,0,0]
+        if action[0] and action[1]:
+            state_encod[(m + t + d) + action[0] - 1] = 1
+            state_encod[(m + t + d + m) + action[1] - 1] = 1
             
         return state_encod
 
@@ -138,6 +140,7 @@ class CabDriver():
 
         if (0, 0) not in actions:
             actions.append((0,0))
+            possible_actions_index.append(20)
 
         return possible_actions_index,actions   
 
