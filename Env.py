@@ -157,9 +157,25 @@ class CabDriver():
         cur_loc = state[0]
         st_loc = action[0]
         end_loc = action[1]
-        tod = int(state[1])
-        dow = int(state[2])
-        
+        tod = state[1]
+        dow = state[2]
+
+        #-----------------
+        def get_new_time_day(tod, dow, total_time):
+            """
+            calculates new time and day
+            """
+            tod = tod + total_time % (t - 1)
+            dow = dow + (total_time // (t - 1))
+            
+            if tod > (t-1):
+                dow = dow + (tod // (t - 1))
+                tod = tod % (t - 1)
+                if dow > (d - 1):
+                    dow = dow % (d - 1)        
+            
+            return tod, dow
+                
         #-----------------
         def get_total_travel_time(cur_loc, st_loc, end_loc, tod, dow):
             """
@@ -170,15 +186,20 @@ class CabDriver():
             
             t1 = 0
             if st_loc and cur_loc != st_loc:
-                t1 = Time_matrix[cur_loc-1][st_loc-1][tod][dow]
+                t1 = int(Time_matrix[cur_loc-1][st_loc-1][tod][dow])
 
-            t2 = Time_matrix[st_loc-1][end_loc-1][tod][dow]
-            print("t1={} t2={}".format(t1, t2))
+                # compute new tod and dow after travel t1
+                tod, dow = get_new_time_day(tod, dow, t1)
+            
+            t2 = int(Time_matrix[st_loc-1][end_loc-1][tod][dow])
+            #print("t1={} t2={}".format(t1, t2))
+
             return t1, t2
         #-----------------   
         
         t1, t2 = get_total_travel_time(cur_loc, st_loc, end_loc, tod, dow)
-        print("t1={} t2={}".format(t1, t2))
+        #print("t1={} t2={}".format(t1, t2))
+        
         if not st_loc and not end_loc:
             reward = -C
         else:
@@ -208,9 +229,12 @@ class CabDriver():
             
             t1 = 0
             if st_loc and cur_loc != st_loc:
-                t1 = Time_matrix[cur_loc-1][st_loc-1][tod][dow]
+                t1 = int(Time_matrix[cur_loc-1][st_loc-1][tod][dow])
+                
+                # compute new tod and dow after travel t1
+                tod, dow = get_new_time_day(tod, dow, t1)
 
-            t2 = Time_matrix[st_loc-1][end_loc-1][tod][dow]
+            t2 = int(Time_matrix[st_loc-1][end_loc-1][tod][dow])
             return t1 + t2
 
         #-----------------
@@ -218,16 +242,16 @@ class CabDriver():
             """
             calculates new time and day
             """
-            tod = tod + int(total_time%(t-1))
-            dow = dow + total_time//(t-1)
+            tod = tod + total_time % (t - 1)
+            dow = dow + (total_time // (t - 1))
             
             if tod > (t-1):
-                dow = dow + tod//(t-1)
-                tod = int(tod%(t-1))
-                if dow > (d-1):
-                    dow = int(dow%(d-1))        
+                dow = dow + (tod // (t - 1))
+                tod = tod % (t - 1)
+                if dow > (d - 1):
+                    dow = dow % (d - 1)        
             
-            return int(tod), int(dow)
+            return tod, dow
         #-----------------
         
         total_trv_time = get_total_travel_time(cur_loc, st_loc, end_loc, tod, dow)
