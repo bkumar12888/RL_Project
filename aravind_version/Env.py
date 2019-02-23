@@ -11,8 +11,8 @@ d = 7  # number of days, ranges from 0 ... d-1
 C = 5 # Per hour fuel and other costs
 R = 9 # per hour revenue from a passenger
 
-loc_dict = {'A':1, 'B':2, 'C':3, 'D':4, 'E':5}
-day_dict = {'MON':0, 'TUE':1, 'WED':2, 'THU':3, 'FRI':4, 'SAT':5, 'SUN':6}
+# {'A':1, 'B':2, 'C':3, 'D':4, 'E':5}
+# {'MON':0, 'TUE':1, 'WED':2, 'THU':3, 'FRI':4, 'SAT':5, 'SUN':6}
 
 
 class CabDriver():
@@ -23,12 +23,13 @@ class CabDriver():
         """
         self.accum_travel_hours = 0
           
+        # Locations:       A, B, C, D, E          
+        #                  represented by integers 1, 2, 3, 4, 5 (start index 1)
         # Time of the day: 24 hours clock 00:00, 01:00, ..., 22:00, 23:00
         #                  represented by integers 0, 1, 2, 3, 4, ..., 22, 23
         # Day of the week: MON, TUE, WED, THU, FRI, SAT, SUN
         #                  represented by integers 0, 1, 2, 3, 4, 5, 6
-        # Locations:       A, B, C, D, E          
-        #                  represented by integers 1, 2, 3, 4, 5 (start index 1)
+
           
         # Possible action space = (m-1)*m+1 = 21
         self.action_space = [(1,2), (2,1),
@@ -44,14 +45,16 @@ class CabDriver():
                             (0,0)]
         
         # Total states (Xi Tj Dk) = 1..m, 1...t, 1...d
-        self.state_space = [(a, b, c) for a in range(1, m+1) for b in range(t) for c in range(d)]
+        self.state_space = [(a, b, c) for a in range(1, m+1) 
+                            for b in range(t) 
+                            for c in range(d)]
 
-        # Initialize state to location-A, hours-00:00, MON)
-        self.state_init = random.choice([(1,0,0), (2,0,0), (3,0,0), (4,0,0), (5,0,)])
+        # Initialize state to random-state (location, hours, day)
+        self.state_init = self.state_space[random.randint(0, len(self.state_space)-1)]
         
         # Start the first round
-        # TODO: what is the meaning of start the first round
-        
+        #self.test_run()
+    
         self.reset()
 
 
@@ -157,9 +160,25 @@ class CabDriver():
         cur_loc = state[0]
         st_loc = action[0]
         end_loc = action[1]
-        tod = int(state[1])
-        dow = int(state[2])
-        
+        tod = state[1]
+        dow = state[2]
+
+        #-----------------
+        def get_new_time_day(tod, dow, total_time):
+            """
+            calculates new time and day
+            """
+            tod = tod + total_time % (t - 1)
+            dow = dow + (total_time // (t - 1))
+            
+            if tod > (t-1):
+                dow = dow + (tod // (t - 1))
+                tod = tod % (t - 1)
+                if dow > (d - 1):
+                    dow = dow % (d - 1)        
+            
+            return tod, dow
+                
         #-----------------
         def get_total_travel_time(cur_loc, st_loc, end_loc, tod, dow):
             """
@@ -170,14 +189,21 @@ class CabDriver():
             
             t1 = 0
             if st_loc and cur_loc != st_loc:
-                t1 = Time_matrix[cur_loc-1][st_loc-1][tod][dow]
+                t1 = int(Time_matrix[cur_loc-1][st_loc-1][tod][dow])
 
-            t2 = Time_matrix[st_loc-1][end_loc-1][tod][dow]
+                # compute new tod and dow after travel t1
+                tod, dow = get_new_time_day(tod, dow, t1)
+            
+            t2 = int(Time_matrix[st_loc-1][end_loc-1][tod][dow])
+            #print("t1={} t2={}".format(t1, t2))
+
             return t1, t2
         #-----------------   
         
         t1, t2 = get_total_travel_time(cur_loc, st_loc, end_loc, tod, dow)
-        if st_loc == 0 and end_loc == 0:
+        #print("t1={} t2={}".format(t1, t2))
+        
+        if not st_loc and not end_loc:
             reward = -C
         else:
             reward = R * t2 - C * (t1 + t2)        
@@ -206,9 +232,12 @@ class CabDriver():
             
             t1 = 0
             if st_loc and cur_loc != st_loc:
-                t1 = Time_matrix[cur_loc-1][st_loc-1][tod][dow]
+                t1 = int(Time_matrix[cur_loc-1][st_loc-1][tod][dow])
+                
+                # compute new tod and dow after travel t1
+                tod, dow = get_new_time_day(tod, dow, t1)
 
-            t2 = Time_matrix[st_loc-1][end_loc-1][tod][dow]
+            t2 = int(Time_matrix[st_loc-1][end_loc-1][tod][dow])
             return t1 + t2
 
         #-----------------
@@ -216,16 +245,16 @@ class CabDriver():
             """
             calculates new time and day
             """
-            tod = tod + int(total_time%(t-1))
-            dow = dow + total_time//(t-1)
+            tod = tod + total_time % (t - 1)
+            dow = dow + (total_time // (t - 1))
             
             if tod > (t-1):
-                dow = dow + tod//(t-1)
-                tod = int(tod%(t-1))
-                if dow > (d-1):
-                    dow = int(dow%(d-1))        
+                dow = dow + (tod // (t - 1))
+                tod = tod % (t - 1)
+                if dow > (d - 1):
+                    dow = dow % (d - 1)        
             
-            return int(tod), int(dow)
+            return tod, dow
         #-----------------
         
         total_trv_time = get_total_travel_time(cur_loc, st_loc, end_loc, tod, dow)
@@ -243,4 +272,42 @@ class CabDriver():
 
     def reset(self):
         self.accum_travel_hours = 0
+        
         return self.action_space, self.state_space, self.state_init
+
+    def test_run(self):
+        """
+        This fuction can be used to test the environment
+        """
+        # Loading the time matrix provided
+        import operator
+        Time_matrix = np.load("TM.npy")
+        print("CURRENT STATE: {}".format(self.state_init))
+
+        # Check request at the init state
+        requests = self.requests(self.state_init)
+        print("REQUESTS: {}".format(requests))
+
+        # compute rewards
+        rewards = []
+        for req in requests[1]:
+            r =  self.reward_func(self.state_init, req, Time_matrix)
+            rewards.append(r)
+        print("REWARDS: {}".format(rewards))
+
+        new_states = []
+        for req in requests[1]:
+            s = self.next_state_func(self.state_init, req, Time_matrix)
+            new_states.append(s)
+        print("NEW POSSIBLE STATES: {}".format(new_states))
+
+        # if we decide the new state based on max reward
+        index, max_reward = max(enumerate(rewards), key=operator.itemgetter(1))
+        self.state_init = new_states[index]
+        print("MAXIMUM REWARD: {}".format(max_reward))
+        print ("ACTION : {}".format(requests[1][index]))
+        print("NEW STATE: {}".format(self.state_init))
+        print("NN INPUT LAYER (ARC-1): {}".format(self.state_encod_arch1(self.state_init)))
+        print("NN INPUT LAYER (ARC-2): {}".format(self.state_encod_arch2(self.state_init, requests[1][index])))
+        
+    
