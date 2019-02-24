@@ -50,6 +50,7 @@ class CabDriver():
                             for c in range(d)]
 
         # Initialize state to random-state (location, hours, day)
+        # We keep track of # of hours for an episode 30*24 hours. Thus start time and day does not matter.
         self.state_init = self.state_space[random.randint(0, len(self.state_space)-1)]
         
         # Start the first round
@@ -57,6 +58,7 @@ class CabDriver():
     
         self.reset()
 
+        
 
     ## Encoding state (or state-action) for NN input
     def state_encod_arch1(self, state):
@@ -82,6 +84,7 @@ class CabDriver():
         
         return state_encod
 
+    
 
     # Use this function if you are using architecture-2 
     def state_encod_arch2(self, state, action):
@@ -112,6 +115,7 @@ class CabDriver():
             
         return state_encod
 
+    
 
     ## Getting number of requests
     def requests(self, state):
@@ -271,10 +275,16 @@ class CabDriver():
 
 
     def reset(self):
+        # reset the accumulated hours, this includes hours for waiting with action (0, 0)
         self.accum_travel_hours = 0
+        
+        # re-set the initial state to a random one at begenining of each episode
+        self.state_init = self.state_space[random.randint(0, len(self.state_space)-1)]
         
         return self.action_space, self.state_space, self.state_init
 
+    
+    
     def test_run(self):
         """
         This fuction can be used to test the environment
